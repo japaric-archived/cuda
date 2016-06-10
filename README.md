@@ -4,7 +4,9 @@ Experiments with CUDA and Rust
 
 ## Examples
 
-- The classic [vector addition](/examples/add.rs).
+- [Query number of devices](/examples/query.rs).
+- [Device memcpy](/tests/memcpy.rs).
+- [Vector addition](/tests/add.rs).
 - A RGBA to [grayscale](/examples/gray.rs) image transform.
 
 ## Areas to explore

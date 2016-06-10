@@ -1,22 +1,18 @@
 [package]
+authors = ["Jorge Aparicio <japaricious@gmail.com>"]
+build = "build.rs"
 name = "cuda"
 version = "0.0.0"
-authors = ["Jorge Aparicio <japaricious@gmail.com>"]
+
+[build-dependencies]
+bindgen = "0.18.0"
 
 [dependencies]
-libc = "*"
-tempdir = "*"
+cast = "0.1.0"
+tempdir = "0.3.4"
+uxx = { path = "uxx" }
 
 [dev-dependencies]
-rand = "*"
-time = "*"
-
-[dependencies.bindgen_plugin]
-git = "https://github.com/japaric/rust-bindgen"
-branch = "plugin"
-
-[dependencies.cast]
-git = "https://github.com/japaric/cast.rs"
-
-[dev-dependencies.image]
-git = "https://github.com/PistonDevelopers/image"
+hyper = "0.9.7"
+image = "0.10.0"
+rand = "0.3.14"
