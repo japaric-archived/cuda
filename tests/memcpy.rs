@@ -5,12 +5,11 @@ extern crate uxx;
 use std::ffi::CStr;
 use std::mem;
 
-use cuda::compile;
 use cuda::driver::{self, Any, Block, Device, Direction, Grid, Result};
 use rand::{Rng, XorShiftRng};
 use uxx::u31;
 
-const KERNEL: &'static str = include_str!("memcpy.cu");
+const KERNEL: &'static str = include_str!("kernel.ptx");
 
 #[test]
 fn memcpy() {
@@ -21,7 +20,9 @@ fn run() -> Result<()> {
     const SIZE: usize = 1024 * 1024;
 
     // Compile KERNEL
-    let ref ptx = compile::source(KERNEL).unwrap();
+    let kernel = &mut KERNEL.to_owned().into_bytes();
+    kernel.push(0);
+    let ptx = CStr::from_bytes_with_nul(kernel).unwrap();
 
     // Allocate memory on host
     let ref mut rng: XorShiftRng = rand::thread_rng().gen();

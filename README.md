@@ -2,6 +2,16 @@
 
 Experiments with CUDA and Rust
 
+Testing the [new PTX targets][Implementation].
+
+```
+$ rustc --target nvptx64-unknown-unknown --emit=asm -O kernel.rs
+$ mv kernel.s tests/kernel.ptx
+# change `.func memcpy_` to `.entry memcpy_`
+$ edit tests/kernel.ptx
+$ cargo test memcpy
+```
+
 ## Examples
 
 - [Query number of devices](/examples/query.rs).
@@ -11,7 +21,7 @@ Experiments with CUDA and Rust
 
 ## Areas to explore
 
-- Generating PTX from Rust code at compile time. ([prior art]).
+- ~~Generating PTX from Rust code at compile time. ([prior art]).~~ WIP. [Implementation]. [RFC].
 - Type safety for launching kernels. Arity and argument types should be validated at compile time.
 - Linear algebra library with transparent CUDA acceleration. A matrix type that stores its data
   in the GPU, with operator sugar that maps to CuBLAS/custom kernels.
@@ -22,6 +32,8 @@ Experiments with CUDA and Rust
 
 [linalg]: https://github.com/japaric/linalg.rs
 [prior art]: http://blog.theincredibleholk.org/blog/2012/12/05/compiling-rust-for-gpus/
+[Implementation]: https://github.com/rust-lang/rust/pull/34195
+[RFC]: https://github.com/rust-lang/rfcs/pull/1641
 
 ## License
 
