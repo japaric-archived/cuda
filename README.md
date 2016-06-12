@@ -11,7 +11,7 @@ Experiments with CUDA and Rust
 
 ## Areas to explore
 
-- Generating PTX from Rust code at compile time. ([prior art]).
+- ~~Generating PTX from Rust code at compile time. ([prior art]).~~ WIP. See [1] and [2].
 - ~~Type safety for launching kernels. Arity and argument types should be validated at compile
   time.~~ WIP. See this [tentative design](design/single-source.md).
 - Linear algebra library with transparent CUDA acceleration. A matrix type that stores its data
@@ -23,6 +23,8 @@ Experiments with CUDA and Rust
 
 [linalg]: https://github.com/japaric/linalg.rs
 [prior art]: http://blog.theincredibleholk.org/blog/2012/12/05/compiling-rust-for-gpus/
+[1]: https://github.com/rust-lang/rfcs/pull/1641
+[2]: https://github.com/rust-lang/rust/pull/34195
 
 ## License
 
