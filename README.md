@@ -12,7 +12,8 @@ Experiments with CUDA and Rust
 ## Areas to explore
 
 - Generating PTX from Rust code at compile time. ([prior art]).
-- Type safety for launching kernels. Arity and argument types should be validated at compile time.
+- ~~Type safety for launching kernels. Arity and argument types should be validated at compile
+  time.~~ WIP. See this [tentative design](design/single-source.md).
 - Linear algebra library with transparent CUDA acceleration. A matrix type that stores its data
   in the GPU, with operator sugar that maps to CuBLAS/custom kernels.
 - Kernel creation (at runtime/compile time) from expression templates. Given a expression
