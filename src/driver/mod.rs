@@ -8,6 +8,7 @@ use uxx::u31;
 #[allow(dead_code)]
 #[allow(non_camel_case_types)]
 #[allow(non_snake_case)]
+#[allow(non_upper_case_globals)]
 #[cfg_attr(clippy, allow(expl_impl_clone_on_copy))]
 #[cfg_attr(clippy, allow(used_underscore_binding))]
 #[cfg_attr(rustfmt, rustfmt_skip)]
@@ -288,6 +289,7 @@ pub enum Error {
     NotPermitted,
     NotReady,
     NotSupported,
+    NvlinkUncorrectable,
     OperatingSystem,
     OutOfMemory,
     PeerAccessAlreadyEnabled,
@@ -415,5 +417,6 @@ fn lift(e: ll::CUresult) -> Result<()> {
         CUDA_ERROR_UNKNOWN => Unknown,
         CUDA_ERROR_UNMAP_FAILED => UnmapFailed,
         CUDA_ERROR_UNSUPPORTED_LIMIT => UnsupportedLimit,
+        CUDA_ERROR_NVLINK_UNCORRECTABLE => NvlinkUncorrectable,
     })
 }

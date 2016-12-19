@@ -1,3 +1,4 @@
+#![feature(untagged_unions)]
 #![deny(warnings)]
 
 extern crate cast;

@@ -4,8 +4,9 @@ build = "build.rs"
 name = "cuda"
 version = "0.0.0"
 
-[build-dependencies]
-bindgen = "0.18.0"
+[build-dependencies.libbindgen]
+git = "https://github.com/servo/rust-bindgen"
+features = ["llvm_stable"]
 
 [dependencies]
 cast = "0.1.0"
