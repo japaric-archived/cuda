@@ -2,7 +2,7 @@
 
 > Experiments with CUDA and Rust
 
-Testing [Rust -> PTX support]()
+Testing [Rust -> PTX support](https://github.com/rust-lang/rust/pull/38559)
 
 ```
 # Convert a crate into a PTX module
