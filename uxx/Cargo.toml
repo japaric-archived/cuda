@@ -1,7 +1,0 @@
-[package]
-authors = ["Jorge Aparicio <japaricious@gmail.com>"]
-name = "uxx"
-version = "0.1.0"
-
-[dependencies]
-cast = "0.1.0"

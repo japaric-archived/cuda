@@ -2,18 +2,7 @@
 authors = ["Jorge Aparicio <japaricious@gmail.com>"]
 build = "build.rs"
 name = "cuda"
-version = "0.0.0"
-
-[build-dependencies.libbindgen]
-git = "https://github.com/servo/rust-bindgen"
-features = ["llvm_stable"]
-
-[dependencies]
-cast = "0.1.0"
-tempdir = "0.3.4"
-uxx = { path = "uxx" }
+version = "0.1.0"
 
 [dev-dependencies]
-hyper = "0.9.7"
-image = "0.10.0"
-rand = "0.3.14"
+rand = "0.3.15"

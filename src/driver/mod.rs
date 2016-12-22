@@ -2,16 +2,10 @@ use std::ffi::CStr;
 use std::marker::PhantomData;
 use std::{mem, ptr, result};
 
-use cast::i32;
-use uxx::u31;
-
 #[allow(dead_code)]
 #[allow(non_camel_case_types)]
 #[allow(non_snake_case)]
 #[allow(non_upper_case_globals)]
-#[cfg_attr(clippy, allow(expl_impl_clone_on_copy))]
-#[cfg_attr(clippy, allow(used_underscore_binding))]
-#[cfg_attr(rustfmt, rustfmt_skip)]
 mod ll;
 
 pub struct Block {
@@ -44,7 +38,7 @@ impl Context {
     pub fn current() -> Result<Option<Self>> {
         let mut handle = ptr::null_mut();
 
-        unsafe { try!(lift(ll::cuCtxGetCurrent(&mut handle))) }
+        unsafe { lift(ll::cuCtxGetCurrent(&mut handle))? }
 
         if handle.is_null() {
             Ok(None)
@@ -59,7 +53,9 @@ impl Context {
     pub fn load_module<'ctx>(&'ctx self, image: &CStr) -> Result<Module<'ctx>> {
         let mut handle = ptr::null_mut();
 
-        unsafe { try!(lift(ll::cuModuleLoadData(&mut handle, image.as_ptr() as *const _))) }
+        unsafe {
+            lift(ll::cuModuleLoadData(&mut handle, image.as_ptr() as *const _))?
+        }
 
         Ok(Module {
             handle: handle,
@@ -82,21 +78,21 @@ pub struct Device {
 }
 
 #[allow(non_snake_case)]
-pub fn Device(ordinal: u31) -> Result<Device> {
+pub fn Device(ordinal: u16) -> Result<Device> {
     let mut handle = 0;
 
-    unsafe { try!(lift(ll::cuDeviceGet(&mut handle, i32(ordinal)))) }
+    unsafe { lift(ll::cuDeviceGet(&mut handle, i32::from(ordinal)))? }
 
     Ok(Device { handle: handle })
 }
 
 impl Device {
-    pub fn count() -> Result<u31> {
+    pub fn count() -> Result<u32> {
         let mut count: i32 = 0;
 
-        unsafe { try!(lift(ll::cuDeviceGetCount(&mut count))) }
+        unsafe { lift(ll::cuDeviceGetCount(&mut count))? }
 
-        Ok(unsafe { u31::unchecked(count) })
+        Ok(count as u32)
     }
 
     pub fn create_context(&self) -> Result<Context> {
@@ -104,7 +100,7 @@ impl Device {
         // TODO expose
         let flags = 0;
 
-        unsafe { try!(lift(ll::cuCtxCreate_v2(&mut handle, flags, self.handle))) }
+        unsafe { lift(ll::cuCtxCreate_v2(&mut handle, flags, self.handle))? }
 
         Ok(Context {
             defused: false,
@@ -113,13 +109,15 @@ impl Device {
     }
 
     pub fn max_threads_per_block(&self) -> Result<i32> {
-        self.get(ll::CUdevice_attribute_enum::CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_BLOCK)
+        use self::ll::CUdevice_attribute_enum::*;
+
+        self.get(CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_BLOCK)
     }
 
     pub fn total_memory(&self) -> Result<usize> {
         let mut bytes = 0;
 
-        unsafe { try!(lift(ll::cuDeviceTotalMem_v2(&mut bytes, self.handle))) };
+        unsafe { lift(ll::cuDeviceTotalMem_v2(&mut bytes, self.handle))? };
 
         Ok(bytes)
     }
@@ -127,7 +125,9 @@ impl Device {
     fn get(&self, attr: ll::CUdevice_attribute) -> Result<i32> {
         let mut value = 0;
 
-        unsafe { try!(lift(ll::cuDeviceGetAttribute(&mut value, attr, self.handle))) }
+        unsafe {
+            lift(ll::cuDeviceGetAttribute(&mut value, attr, self.handle))?
+        }
 
         Ok(value)
     }
@@ -139,28 +139,32 @@ pub struct Function<'ctx: 'm, 'm> {
 }
 
 impl<'ctx, 'm> Function<'ctx, 'm> {
-    pub fn launch(&self, args: &[&Any], grid: Grid, block: Block) -> Result<()> {
-        let stream = try!(Stream::new());
+    pub fn launch(&self,
+                  args: &[&Any],
+                  grid: Grid,
+                  block: Block)
+                  -> Result<()> {
+        let stream = Stream::new()?;
         // TODO expose
         let shared_mem_bytes = 0;
         // TODO expose
         let extra = ptr::null_mut();
 
         unsafe {
-            try!(lift(ll::cuLaunchKernel(self.handle,
-                                         grid.x,
-                                         grid.y,
-                                         grid.z,
-                                         block.x,
-                                         block.y,
-                                         block.z,
-                                         shared_mem_bytes,
-                                         stream.handle,
-                                         args.as_ptr() as *mut _,
-                                         extra)))
+            lift(ll::cuLaunchKernel(self.handle,
+                                    grid.x,
+                                    grid.y,
+                                    grid.z,
+                                    block.x,
+                                    block.y,
+                                    block.z,
+                                    shared_mem_bytes,
+                                    stream.handle,
+                                    args.as_ptr() as *mut _,
+                                    extra))?
         }
 
-        try!(stream.sync());
+        stream.sync()?;
         stream.destroy()
     }
 }
@@ -194,7 +198,11 @@ impl<'ctx> Module<'ctx> {
     pub fn function<'m>(&'m self, name: &CStr) -> Result<Function<'ctx, 'm>> {
         let mut handle = ptr::null_mut();
 
-        unsafe { try!(lift(ll::cuModuleGetFunction(&mut handle, self.handle, name.as_ptr()))) }
+        unsafe {
+            lift(ll::cuModuleGetFunction(&mut handle,
+                                         self.handle,
+                                         name.as_ptr()))?
+        }
 
         Ok(Function {
             handle: handle,
@@ -220,7 +228,7 @@ impl Stream {
         // TODO expose
         let flags = 0;
 
-        unsafe { try!(lift(ll::cuStreamCreate(&mut handle, flags))) }
+        unsafe { lift(ll::cuStreamCreate(&mut handle, flags))? }
 
         Ok(Stream { handle: handle })
     }
@@ -311,7 +319,7 @@ pub enum Error {
 pub unsafe fn allocate(size: usize) -> Result<*mut u8> {
     let mut dptr = 0;
 
-    try!(lift(ll::cuMemAlloc_v2(&mut dptr, size)));
+    lift(ll::cuMemAlloc_v2(&mut dptr, size))?;
 
     Ok(dptr as *mut u8)
 }
@@ -325,10 +333,10 @@ pub unsafe fn copy<T>(src: *const T,
 
     let bytes = count * mem::size_of::<T>();
 
-    try!(lift(match direction {
+    lift(match direction {
         DeviceToHost => ll::cuMemcpyDtoH_v2(dst as *mut _, src as u64, bytes),
         HostToDevice => ll::cuMemcpyHtoD_v2(dst as u64, src as *const _, bytes),
-    }));
+    })?;
 
     Ok(())
 }
@@ -347,7 +355,7 @@ pub fn initialize() -> Result<()> {
 pub fn version() -> Result<i32> {
     let mut version = 0;
 
-    unsafe { try!(lift(ll::cuDriverGetVersion(&mut version))) }
+    unsafe { lift(ll::cuDriverGetVersion(&mut version))? }
 
     Ok(version)
 }
@@ -371,7 +379,9 @@ fn lift(e: ll::CUresult) -> Result<()> {
         CUDA_ERROR_ECC_UNCORRECTABLE => EccUncorrectable,
         CUDA_ERROR_FILE_NOT_FOUND => FileNotFound,
         CUDA_ERROR_HARDWARE_STACK_ERROR => HardwareStackError,
-        CUDA_ERROR_HOST_MEMORY_ALREADY_REGISTERED => HostMemoryAlreadyRegistered,
+        CUDA_ERROR_HOST_MEMORY_ALREADY_REGISTERED => {
+            HostMemoryAlreadyRegistered
+        }
         CUDA_ERROR_HOST_MEMORY_NOT_REGISTERED => HostMemoryNotRegistered,
         CUDA_ERROR_ILLEGAL_ADDRESS => IllegalAddress,
         CUDA_ERROR_ILLEGAL_INSTRUCTION => IllegalInstruction,
