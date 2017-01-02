@@ -1,3 +1,7 @@
+//! CUDA driver
+//!
+//! Reference: http://docs.nvidia.com/cuda/cuda-driver-api/
+
 use std::ffi::CStr;
 use std::marker::PhantomData;
 use std::{mem, ptr, result};
@@ -8,6 +12,7 @@ use std::{mem, ptr, result};
 #[allow(non_upper_case_globals)]
 mod ll;
 
+/// A CUDA "block"
 pub struct Block {
     x: u32,
     y: u32,
@@ -15,19 +20,23 @@ pub struct Block {
 }
 
 impl Block {
+    /// One dimensional block
     pub fn x(x: u32) -> Self {
         Block { x: x, y: 1, z: 1 }
     }
 
+    /// Two dimensional block
     pub fn xy(x: u32, y: u32) -> Self {
         Block { x: x, y: y, z: 1 }
     }
 
+    /// Three dimensional block
     pub fn xyz(x: u32, y: u32, z: u32) -> Self {
         Block { x: x, y: y, z: z }
     }
 }
 
+/// A CUDA "context"
 #[derive(Debug)]
 pub struct Context {
     defused: bool,
@@ -35,7 +44,10 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn current() -> Result<Option<Self>> {
+    // TODO is this actually useful? Note that we are using "RAII" (cf. `drop`)
+    // and ownership to manage `Context`es
+    #[allow(dead_code)]
+    fn current() -> Result<Option<Self>> {
         let mut handle = ptr::null_mut();
 
         unsafe { lift(ll::cuCtxGetCurrent(&mut handle))? }
@@ -50,6 +62,7 @@ impl Context {
         }
     }
 
+    /// Loads a PTX module
     pub fn load_module<'ctx>(&'ctx self, image: &CStr) -> Result<Module<'ctx>> {
         let mut handle = ptr::null_mut();
 
@@ -72,21 +85,24 @@ impl Drop for Context {
     }
 }
 
+/// A CUDA device (a GPU)
 #[derive(Debug)]
 pub struct Device {
     handle: ll::CUdevice,
 }
 
+/// Binds to the `nth` device
 #[allow(non_snake_case)]
-pub fn Device(ordinal: u16) -> Result<Device> {
+pub fn Device(nth: u16) -> Result<Device> {
     let mut handle = 0;
 
-    unsafe { lift(ll::cuDeviceGet(&mut handle, i32::from(ordinal)))? }
+    unsafe { lift(ll::cuDeviceGet(&mut handle, i32::from(nth)))? }
 
     Ok(Device { handle: handle })
 }
 
 impl Device {
+    /// Returns the number of available devices
     pub fn count() -> Result<u32> {
         let mut count: i32 = 0;
 
@@ -95,6 +111,7 @@ impl Device {
         Ok(count as u32)
     }
 
+    /// Creates a CUDA context for this device
     pub fn create_context(&self) -> Result<Context> {
         let mut handle = ptr::null_mut();
         // TODO expose
@@ -108,12 +125,15 @@ impl Device {
         })
     }
 
+    /// Returns the maximum number of threads a block can have
     pub fn max_threads_per_block(&self) -> Result<i32> {
         use self::ll::CUdevice_attribute_enum::*;
 
         self.get(CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_BLOCK)
     }
 
+    /// Returns the total amount of (non necessarily free) memory, in bytes,
+    /// that the device has
     pub fn total_memory(&self) -> Result<usize> {
         let mut bytes = 0;
 
@@ -133,12 +153,17 @@ impl Device {
     }
 }
 
+/// A function that the CUDA device can execute. AKA a "kernel"
 pub struct Function<'ctx: 'm, 'm> {
     handle: ll::CUfunction,
     _module: PhantomData<&'m Module<'ctx>>,
 }
 
 impl<'ctx, 'm> Function<'ctx, 'm> {
+    /// Execute a function on the GPU
+    ///
+    /// NOTE This function blocks until the GPU has finished executing the
+    /// kernel
     pub fn launch(&self,
                   args: &[&Any],
                   grid: Grid,
@@ -169,6 +194,7 @@ impl<'ctx, 'm> Function<'ctx, 'm> {
     }
 }
 
+/// A CUDA "grid"
 pub struct Grid {
     x: u32,
     y: u32,
@@ -176,25 +202,30 @@ pub struct Grid {
 }
 
 impl Grid {
+    /// One dimensional grid
     pub fn x(x: u32) -> Self {
         Grid { x: x, y: 1, z: 1 }
     }
 
+    /// Two dimensional grid
     pub fn xy(x: u32, y: u32) -> Self {
         Grid { x: x, y: y, z: 1 }
     }
 
+    /// Three dimensional grid
     pub fn xyz(x: u32, y: u32, z: u32) -> Self {
         Grid { x: x, y: y, z: z }
     }
 }
 
+/// A PTX module
 pub struct Module<'ctx> {
     handle: ll::CUmodule,
     _context: PhantomData<&'ctx Context>,
 }
 
 impl<'ctx> Module<'ctx> {
+    /// Retrieves a function from the PTX module
     pub fn function<'m>(&'m self, name: &CStr) -> Result<Function<'ctx, 'm>> {
         let mut handle = ptr::null_mut();
 
@@ -242,18 +273,24 @@ impl Stream {
     }
 }
 
+/// Value who's type has been erased
 pub enum Any {}
 
+/// Erase the type of a value
 #[allow(non_snake_case)]
 pub fn Any<T>(ref_: &T) -> &Any {
     unsafe { &*(ref_ as *const T as *const Any) }
 }
 
+/// `memcpy` direction
 pub enum Direction {
+    /// `src` points to device memory. `dst` points to host memory
     DeviceToHost,
+    /// `src` points to host memory. `dst` points to device memory
     HostToDevice,
 }
 
+#[allow(missing_docs)]
 #[derive(Debug)]
 pub enum Error {
     AlreadyAcquired,
@@ -316,14 +353,19 @@ pub enum Error {
     UnsupportedLimit,
 }
 
-pub unsafe fn allocate(size: usize) -> Result<*mut u8> {
-    let mut dptr = 0;
+// TODO should this be a method of `Context`?
+/// Allocate `n` bytes of memory on the device
+pub unsafe fn allocate(n: usize) -> Result<*mut u8> {
+    let mut d_ptr = 0;
 
-    lift(ll::cuMemAlloc_v2(&mut dptr, size))?;
+    lift(ll::cuMemAlloc_v2(&mut d_ptr, n))?;
 
-    Ok(dptr as *mut u8)
+    Ok(d_ptr as *mut u8)
 }
 
+/// Copy `n` bytes of memory from `src` to `dst`
+///
+/// `direction` indicates where `src` and `dst` are located (device or host)
 pub unsafe fn copy<T>(src: *const T,
                       dst: *mut T,
                       count: usize,
@@ -341,10 +383,13 @@ pub unsafe fn copy<T>(src: *const T,
     Ok(())
 }
 
+// TODO same question as `allocate`
+/// Free the memory pointed to by `ptr`
 pub unsafe fn deallocate(ptr: *mut u8) -> Result<()> {
     lift(ll::cuMemFree_v2(ptr as u64))
 }
 
+/// Initialize the CUDA runtime
 pub fn initialize() -> Result<()> {
     // TODO expose
     let flags = 0;
@@ -352,6 +397,7 @@ pub fn initialize() -> Result<()> {
     unsafe { lift(ll::cuInit(flags)) }
 }
 
+/// Returns the version of the CUDA runtime
 pub fn version() -> Result<i32> {
     let mut version = 0;
 
@@ -360,6 +406,7 @@ pub fn version() -> Result<i32> {
     Ok(version)
 }
 
+#[allow(missing_docs)]
 pub type Result<T> = result::Result<T, Error>;
 
 fn lift(e: ll::CUresult) -> Result<()> {

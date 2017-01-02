@@ -1,7 +1,0 @@
-[package]
-authors = ["Jorge Aparicio <japaricious@gmail.com>"]
-name = "kernel"
-version = "0.1.0"
-
-[dependencies.nvptx-builtins]
-git = "https://github.com/japaric/nvptx-builtins"
