@@ -62,6 +62,13 @@ impl Context {
         }
     }
 
+    /// Binds context to the calling thread
+    pub fn set_current(&self) -> Result<()> {
+        unsafe {
+            lift(ll::cuCtxSetCurrent(self.handle))
+        }
+    }
+
     /// Loads a PTX module
     pub fn load_module<'ctx>(&'ctx self, image: &CStr) -> Result<Module<'ctx>> {
         let mut handle = ptr::null_mut();
