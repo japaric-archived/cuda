@@ -1,0 +1,7 @@
+set -ex
+
+main() {
+
+}
+
+main
