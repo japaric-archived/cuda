@@ -1,3 +1,11 @@
+# Status
+
+This crate is **UNMAINTAINED**. If you are interested in Rust on NVIDIA GPUs check out https://github.com/rust-cuda/wg
+
+-- @japaric, 2018-12-08
+
+---
+
 # `cuda`
 
 > Rustic bindings to the CUDA API
